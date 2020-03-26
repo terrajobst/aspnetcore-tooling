@@ -32,7 +32,8 @@ namespace Microsoft.AspNetCore.Razor.LanguageServer.Common
             var decodedPath = WebUtility.UrlDecode(filePath);
             var normalized = decodedPath.Replace('\\', '/');
 
-            if (normalized[0] != '/')
+            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows) &&
+                normalized[0] != '/')
             {
                 normalized = '/' + normalized;
             }

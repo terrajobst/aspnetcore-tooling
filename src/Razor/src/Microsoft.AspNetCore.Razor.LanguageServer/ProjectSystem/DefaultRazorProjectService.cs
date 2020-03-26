@@ -320,6 +320,7 @@ namespace Microsoft.AspNetCore.Razor.LanguageServer.ProjectSystem
             var projectDirectory = _filePathNormalizer.GetDirectory(project.FilePath);
             var documentMap = documents.ToDictionary(document => EnsureFullPath(document.FilePath, projectDirectory), FilePathComparer.Instance);
 
+            // Update existing documents
             foreach (var documentFilePath in project.DocumentFilePaths)
             {
                 if (!documentMap.TryGetValue(documentFilePath, out var documentHandle))
@@ -345,6 +346,24 @@ namespace Microsoft.AspNetCore.Razor.LanguageServer.ProjectSystem
                 _projectSnapshotManagerAccessor.Instance.DocumentRemoved(currentHostProject, currentHostDocument);
 
                 var remoteTextLoader = _remoteTextLoaderFactory.Create(newFilePath);
+                _projectSnapshotManagerAccessor.Instance.DocumentAdded(currentHostProject, newHostDocument, remoteTextLoader);
+            }
+
+            project = (DefaultProjectSnapshot)_projectSnapshotManagerAccessor.Instance.GetLoadedProject(project.FilePath);
+
+            // Add any new documents
+            foreach (var documentKvp in documentMap)
+            {
+                var documentFilePath = documentKvp.Key;
+                if (project.DocumentFilePaths.Contains(documentFilePath, FilePathComparer.Instance))
+                {
+                    // Already know about this document
+                    continue;
+                }
+
+                var documentHandle = documentKvp.Value;
+                var remoteTextLoader = _remoteTextLoaderFactory.Create(documentFilePath);
+                var newHostDocument = _hostDocumentFactory.Create(documentFilePath, documentHandle.TargetPath, documentHandle.FileKind);
                 _projectSnapshotManagerAccessor.Instance.DocumentAdded(currentHostProject, newHostDocument, remoteTextLoader);
             }
         }
